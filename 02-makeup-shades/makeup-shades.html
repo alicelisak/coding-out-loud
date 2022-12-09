@@ -359,7 +359,8 @@ display: none;
 
 <pre class="r"><code>library(tidyverse)
 library(here)
-library(glue)</code></pre>
+library(glue)
+library(gt)</code></pre>
 <pre class="r"><code>allNumbers &lt;- read_csv(here::here(&quot;02-makeup-shades&quot;, &quot;data/allNumbers.csv&quot;))</code></pre>
 <div id="sketch" class="section level2">
 <h2>Sketch</h2>
@@ -382,12 +383,614 @@ library(glue)</code></pre>
     light_to_dark = unique(lightToDark)
   )</code></pre>
 <ul>
-<li>Create</li>
+<li>Extract natural / nude / etc. info from color name:
+<ul>
+<li>Looking for [Nn]atural, [Nn]eutral, [Nn]ude</li>
+</ul></li>
 </ul>
+<pre class="r"><code>natural_marker &lt;- allNumbers |&gt;
+  mutate(natural_shade = str_detect(name, &quot;[Nn]atural|[Nn]eutral| [Nn]ude&quot;)) |&gt;
+  filter(lightToDark, natural_shade) |&gt;
+  group_by(product) |&gt;
+  summarise(natural_number = mean(numbers))</code></pre>
+<pre class="r"><code>last_two &lt;- allNumbers |&gt;
+  inner_join(natural_marker, by = &quot;product&quot;) |&gt;
+  group_by(product) |&gt;
+  mutate(at_below_natural = (numbers &lt;= natural_number)) |&gt;
+  summarise(
+    n = n(),
+    prop_at_below_natural = (sum(at_below_natural) / n)
+  )</code></pre>
+<ul>
+<li>Put it altogether</li>
+</ul>
+<pre class="r"><code>shades_table &lt;- first_three |&gt;
+  inner_join(last_two, by = &quot;product&quot;)|&gt;
+  select(-light_to_dark)
+shades_table</code></pre>
+<pre><code>## # A tibble: 41 × 4
+##    product                                                  shades     n prop_…¹
+##    &lt;chr&gt;                                                    &lt;glue&gt; &lt;int&gt;   &lt;dbl&gt;
+##  1 10 Hour Wear Perfection Foundation                       #EAD5…    60   0.4  
+##  2 BAREPRO Longwear Powder Foundation                       #FCD3…    35   0.4  
+##  3 BAREPRO Performance Wear Liquid Foundation Broad Spectr… #FCC8…    33   0.394
+##  4 BAREPRO Performance Wear Powder Foundation               #FCC8…    35   0.4  
+##  5 BarePRO™ 24 hour Longwear Liquid Foundation with Minera… #FDD8…    35   0.4  
+##  6 Bounce™ Liquid Whip Long Wear Foundation                 #FCF0…    40   0.4  
+##  7 Clear Complexion Make Myself Clear Makeup                #EAC0…     8   0.5  
+##  8 ColorStay Full Cover Foundation                          #FEE3…    12   0.5  
+##  9 ColorStay Light Cover Liquid Foundation                  #E7B0…     7   0.714
+## 10 ColorStay Makeup For Combo/Oily Skin                     #F9CA…    16   0.5  
+## # … with 31 more rows, and abbreviated variable name ¹​prop_at_below_natural</code></pre>
 </div>
 <div id="task-2-improve" class="section level2">
 <h2>Task 2: Improve</h2>
 <p>Improve the table above.</p>
+<pre class="r"><code>shades_table %&gt;%
+  separate_rows(shades, sep = &quot;, &quot;) %&gt;%
+  mutate(
+    shades = str_trim(shades), 
+    shades = glue(&#39;&lt;span style=&quot;color:{shades}&quot;&gt;■&lt;/span&gt;&#39;)
+    ) %&gt;%
+  group_by(product, n, prop_at_below_natural) %&gt;%
+  summarise(shades = glue_collapse(shades, sep = &quot; &quot;), .groups = &quot;drop&quot;) %&gt;%
+  relocate(product, shades) %&gt;%
+  gt() %&gt;%
+  fmt(
+    columns = shades,
+    fns = function(x){
+      map(x, html)
+    }
+  ) %&gt;%
+  fmt_percent(
+    columns = prop_at_below_natural,
+    decimals = 2
+  )</code></pre>
+<div id="ksonouifxj" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>html {
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+}
+#ksonouifxj .gt_table {
+display: table;
+border-collapse: collapse;
+margin-left: auto;
+margin-right: auto;
+color: #333333;
+font-size: 16px;
+font-weight: normal;
+font-style: normal;
+background-color: #FFFFFF;
+width: auto;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #A8A8A8;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #A8A8A8;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+}
+#ksonouifxj .gt_heading {
+background-color: #FFFFFF;
+text-align: center;
+border-bottom-color: #FFFFFF;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+}
+#ksonouifxj .gt_caption {
+padding-top: 4px;
+padding-bottom: 4px;
+}
+#ksonouifxj .gt_title {
+color: #333333;
+font-size: 125%;
+font-weight: initial;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-color: #FFFFFF;
+border-bottom-width: 0;
+}
+#ksonouifxj .gt_subtitle {
+color: #333333;
+font-size: 85%;
+font-weight: initial;
+padding-top: 0;
+padding-bottom: 6px;
+padding-left: 5px;
+padding-right: 5px;
+border-top-color: #FFFFFF;
+border-top-width: 0;
+}
+#ksonouifxj .gt_bottom_border {
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#ksonouifxj .gt_col_headings {
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+}
+#ksonouifxj .gt_col_heading {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: normal;
+text-transform: inherit;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: bottom;
+padding-top: 5px;
+padding-bottom: 6px;
+padding-left: 5px;
+padding-right: 5px;
+overflow-x: hidden;
+}
+#ksonouifxj .gt_column_spanner_outer {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: normal;
+text-transform: inherit;
+padding-top: 0;
+padding-bottom: 0;
+padding-left: 4px;
+padding-right: 4px;
+}
+#ksonouifxj .gt_column_spanner_outer:first-child {
+padding-left: 0;
+}
+#ksonouifxj .gt_column_spanner_outer:last-child {
+padding-right: 0;
+}
+#ksonouifxj .gt_column_spanner {
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+vertical-align: bottom;
+padding-top: 5px;
+padding-bottom: 5px;
+overflow-x: hidden;
+display: inline-block;
+width: 100%;
+}
+#ksonouifxj .gt_group_heading {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: middle;
+text-align: left;
+}
+#ksonouifxj .gt_empty_group_heading {
+padding: 0.5px;
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+vertical-align: middle;
+}
+#ksonouifxj .gt_from_md > :first-child {
+margin-top: 0;
+}
+#ksonouifxj .gt_from_md > :last-child {
+margin-bottom: 0;
+}
+#ksonouifxj .gt_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+margin: 10px;
+border-top-style: solid;
+border-top-width: 1px;
+border-top-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: middle;
+overflow-x: hidden;
+}
+#ksonouifxj .gt_stub {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-right-style: solid;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+padding-left: 5px;
+padding-right: 5px;
+}
+#ksonouifxj .gt_stub_row_group {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-right-style: solid;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+padding-left: 5px;
+padding-right: 5px;
+vertical-align: top;
+}
+#ksonouifxj .gt_row_group_first td {
+border-top-width: 2px;
+}
+#ksonouifxj .gt_summary_row {
+color: #333333;
+background-color: #FFFFFF;
+text-transform: inherit;
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#ksonouifxj .gt_first_summary_row {
+border-top-style: solid;
+border-top-color: #D3D3D3;
+}
+#ksonouifxj .gt_first_summary_row.thick {
+border-top-width: 2px;
+}
+#ksonouifxj .gt_last_summary_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#ksonouifxj .gt_grand_summary_row {
+color: #333333;
+background-color: #FFFFFF;
+text-transform: inherit;
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#ksonouifxj .gt_first_grand_summary_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-top-style: double;
+border-top-width: 6px;
+border-top-color: #D3D3D3;
+}
+#ksonouifxj .gt_striped {
+background-color: rgba(128, 128, 128, 0.05);
+}
+#ksonouifxj .gt_table_body {
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#ksonouifxj .gt_footnotes {
+color: #333333;
+background-color: #FFFFFF;
+border-bottom-style: none;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+}
+#ksonouifxj .gt_footnote {
+margin: 0px;
+font-size: 90%;
+padding-left: 4px;
+padding-right: 4px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#ksonouifxj .gt_sourcenotes {
+color: #333333;
+background-color: #FFFFFF;
+border-bottom-style: none;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+}
+#ksonouifxj .gt_sourcenote {
+font-size: 90%;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#ksonouifxj .gt_left {
+text-align: left;
+}
+#ksonouifxj .gt_center {
+text-align: center;
+}
+#ksonouifxj .gt_right {
+text-align: right;
+font-variant-numeric: tabular-nums;
+}
+#ksonouifxj .gt_font_normal {
+font-weight: normal;
+}
+#ksonouifxj .gt_font_bold {
+font-weight: bold;
+}
+#ksonouifxj .gt_font_italic {
+font-style: italic;
+}
+#ksonouifxj .gt_super {
+font-size: 65%;
+}
+#ksonouifxj .gt_footnote_marks {
+font-style: italic;
+font-weight: normal;
+font-size: 75%;
+vertical-align: 0.4em;
+}
+#ksonouifxj .gt_asterisk {
+font-size: 100%;
+vertical-align: 0;
+}
+#ksonouifxj .gt_indent_1 {
+text-indent: 5px;
+}
+#ksonouifxj .gt_indent_2 {
+text-indent: 10px;
+}
+#ksonouifxj .gt_indent_3 {
+text-indent: 15px;
+}
+#ksonouifxj .gt_indent_4 {
+text-indent: 20px;
+}
+#ksonouifxj .gt_indent_5 {
+text-indent: 25px;
+}
+</style>
+<table class="gt_table">
+  
+  <thead class="gt_col_headings">
+    <tr>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="product">product</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="shades">shades</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="n">n</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="prop_at_below_natural">prop_at_below_natural</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr><td headers="product" class="gt_row gt_left">10 Hour Wear Perfection Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#EAD5CF">■</span> <span style="color:#EACDC3">■</span> <span style="color:#DEB39B">■</span> <span style="color:#D9B19C">■</span> <span style="color:#DCAA81">■</span> <span style="color:#DBBFB6">■</span> <span style="color:#D6AC80">■</span> <span style="color:#D3AA91">■</span> <span style="color:#DDAF8D">■</span> <span style="color:#CDA792">■</span> <span style="color:#D6B1A1">■</span> <span style="color:#D5A683">■</span> <span style="color:#D4B4A3">■</span> <span style="color:#CBA88B">■</span> <span style="color:#D8B495">■</span> <span style="color:#D3AEA2">■</span> <span style="color:#CA9D6E">■</span> <span style="color:#D2AC99">■</span> <span style="color:#D5B095">■</span> <span style="color:#D2A681">■</span> <span style="color:#D8AF95">■</span> <span style="color:#D9A778">■</span> <span style="color:#D4A494">■</span> <span style="color:#C69F77">■</span> <span style="color:#C79C6F">■</span> <span style="color:#CFA88B">■</span> <span style="color:#D4A172">■</span> <span style="color:#D8A68A">■</span> <span style="color:#C69576">■</span> <span style="color:#D4A98D">■</span> <span style="color:#C29369">■</span> <span style="color:#C69879">■</span> <span style="color:#BF8B5C">■</span> <span style="color:#C19769">■</span> <span style="color:#CBA178">■</span> <span style="color:#C1987E">■</span> <span style="color:#C29F81">■</span> <span style="color:#A07548">■</span> <span style="color:#B38665">■</span> <span style="color:#B37A66">■</span> <span style="color:#AE8162">■</span> <span style="color:#A97E63">■</span> <span style="color:#A56E4E">■</span> <span style="color:#A57E63">■</span> <span style="color:#A6744B">■</span> <span style="color:#AB7D68">■</span> <span style="color:#896041">■</span> <span style="color:#9A7057">■</span> <span style="color:#AA7767">■</span> <span style="color:#92694A">■</span> <span style="color:#906D5B">■</span> <span style="color:#A26F5F">■</span> <span style="color:#9B6B61">■</span> <span style="color:#926761">■</span> <span style="color:#6A4733">■</span> <span style="color:#87625F">■</span> <span style="color:#745947">■</span> <span style="color:#8D665C">■</span> <span style="color:#725647">■</span> <span style="color:#7B5E5B">■</span></td>
+<td headers="n" class="gt_row gt_right">60</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">40.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">BAREPRO Longwear Powder Foundation </td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FCD3C1">■</span> <span style="color:#F6D8C4">■</span> <span style="color:#FDD9C0">■</span> <span style="color:#FED9B6">■</span> <span style="color:#F6D1AF">■</span> <span style="color:#FBD2A8">■</span> <span style="color:#F6CC9C">■</span> <span style="color:#E9B6A6">■</span> <span style="color:#F4CD9E">■</span> <span style="color:#F6CCA2">■</span> <span style="color:#DEB8A5">■</span> <span style="color:#E7B995">■</span> <span style="color:#D9B09A">■</span> <span style="color:#F4C594">■</span> <span style="color:#F0C892">■</span> <span style="color:#F3CDA0">■</span> <span style="color:#E3C08F">■</span> <span style="color:#EFB87D">■</span> <span style="color:#E4B691">■</span> <span style="color:#F4C591">■</span> <span style="color:#CEA896">■</span> <span style="color:#DCA363">■</span> <span style="color:#D29F5E">■</span> <span style="color:#D2A288">■</span> <span style="color:#CF9454">■</span> <span style="color:#C89D87">■</span> <span style="color:#B78059">■</span> <span style="color:#C28A5B">■</span> <span style="color:#B77F56">■</span> <span style="color:#C38654">■</span> <span style="color:#A77040">■</span> <span style="color:#A17555">■</span> <span style="color:#96613F">■</span> <span style="color:#7A5542">■</span> <span style="color:#A16442">■</span></td>
+<td headers="n" class="gt_row gt_right">35</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">40.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">BAREPRO Performance Wear Liquid Foundation Broad Spectrum SPF 20</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FCC8B2">■</span> <span style="color:#FBCDB0">■</span> <span style="color:#FDCFAE">■</span> <span style="color:#ECB591">■</span> <span style="color:#E6B295">■</span> <span style="color:#F7C39D">■</span> <span style="color:#F5C59D">■</span> <span style="color:#E6A996">■</span> <span style="color:#F4C398">■</span> <span style="color:#DCAC88">■</span> <span style="color:#D9AC95">■</span> <span style="color:#D8A381">■</span> <span style="color:#D19F84">■</span> <span style="color:#E7A984">■</span> <span style="color:#DD9F7A">■</span> <span style="color:#EFAA7D">■</span> <span style="color:#DC9C70">■</span> <span style="color:#DFA97B">■</span> <span style="color:#E4A176">■</span> <span style="color:#C3957E">■</span> <span style="color:#DB986C">■</span> <span style="color:#C88E6F">■</span> <span style="color:#C4885C">■</span> <span style="color:#BE8A6F">■</span> <span style="color:#AA673B">■</span> <span style="color:#B26C32">■</span> <span style="color:#AA6638">■</span> <span style="color:#B56729">■</span> <span style="color:#9E613B">■</span> <span style="color:#8C5833">■</span> <span style="color:#855637">■</span> <span style="color:#764D31">■</span> <span style="color:#8E441E">■</span></td>
+<td headers="n" class="gt_row gt_right">33</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">39.39%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">BAREPRO Performance Wear Powder Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FCC8B2">■</span> <span style="color:#FBCDB0">■</span> <span style="color:#FDCFAE">■</span> <span style="color:#ECB591">■</span> <span style="color:#E6B295">■</span> <span style="color:#F7C39D">■</span> <span style="color:#F5C59D">■</span> <span style="color:#E6A996">■</span> <span style="color:#F4C398">■</span> <span style="color:#DCAC88">■</span> <span style="color:#D9AC95">■</span> <span style="color:#D8A381">■</span> <span style="color:#D19F84">■</span> <span style="color:#E7A984">■</span> <span style="color:#DD9F7A">■</span> <span style="color:#EBAB7F">■</span> <span style="color:#EFAA7D">■</span> <span style="color:#DC9C70">■</span> <span style="color:#DFA97B">■</span> <span style="color:#E4A176">■</span> <span style="color:#C3957E">■</span> <span style="color:#DB986C">■</span> <span style="color:#D79562">■</span> <span style="color:#C88E6F">■</span> <span style="color:#C4885C">■</span> <span style="color:#BE8A6F">■</span> <span style="color:#AA673B">■</span> <span style="color:#B26C32">■</span> <span style="color:#AA6638">■</span> <span style="color:#B56729">■</span> <span style="color:#9E613B">■</span> <span style="color:#8C5833">■</span> <span style="color:#855637">■</span> <span style="color:#764D31">■</span> <span style="color:#8E441E">■</span></td>
+<td headers="n" class="gt_row gt_right">35</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">40.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">BarePRO™ 24 hour Longwear Liquid Foundation with Mineral SPF 20 </td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FDD8C5">■</span> <span style="color:#F1DFCB">■</span> <span style="color:#FDDDC4">■</span> <span style="color:#EDCBA6">■</span> <span style="color:#E8CBAC">■</span> <span style="color:#E3C5A8">■</span> <span style="color:#E1C8A8">■</span> <span style="color:#EEC1B0">■</span> <span style="color:#DCC5A0">■</span> <span style="color:#EEC8A3">■</span> <span style="color:#E4C2B0">■</span> <span style="color:#E0C4AD">■</span> <span style="color:#DBB29C">■</span> <span style="color:#E7C99A">■</span> <span style="color:#DDAE87">■</span> <span style="color:#E3C69B">■</span> <span style="color:#D1AF86">■</span> <span style="color:#D0A984">■</span> <span style="color:#E8C29F">■</span> <span style="color:#D1AE7A">■</span> <span style="color:#D2AD9A">■</span> <span style="color:#D9A873">■</span> <span style="color:#D2A877">■</span> <span style="color:#D5A78D">■</span> <span style="color:#CDA070">■</span> <span style="color:#CDA48D">■</span> <span style="color:#C2916F">■</span> <span style="color:#C79064">■</span> <span style="color:#C2906C">■</span> <span style="color:#C88D5D">■</span> <span style="color:#B1712B">■</span> <span style="color:#A57B5C">■</span> <span style="color:#AB6C38">■</span> <span style="color:#9C6638">■</span> <span style="color:#A66A49">■</span></td>
+<td headers="n" class="gt_row gt_right">35</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">40.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Bounce™ Liquid Whip Long Wear Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FCF0E5">■</span> <span style="color:#FCEDD8">■</span> <span style="color:#FBE6D6">■</span> <span style="color:#F5DBC1">■</span> <span style="color:#ECCCAF">■</span> <span style="color:#F0C3A6">■</span> <span style="color:#EEC5A2">■</span> <span style="color:#E3C2A8">■</span> <span style="color:#ECC49B">■</span> <span style="color:#ECC49B">■</span> <span style="color:#E2C099">■</span> <span style="color:#DCB290">■</span> <span style="color:#ECC09E">■</span> <span style="color:#F0C2A9">■</span> <span style="color:#E8B77D">■</span> <span style="color:#E4B488">■</span> <span style="color:#E8B172">■</span> <span style="color:#D8A776">■</span> <span style="color:#D9A176">■</span> <span style="color:#D9A176">■</span> <span style="color:#E2B07E">■</span> <span style="color:#D3A778">■</span> <span style="color:#E4AA74">■</span> <span style="color:#D29D74">■</span> <span style="color:#CE9160">■</span> <span style="color:#DA9762">■</span> <span style="color:#AE7955">■</span> <span style="color:#B9773D">■</span> <span style="color:#A8723D">■</span> <span style="color:#A46B3C">■</span> <span style="color:#906131">■</span> <span style="color:#A06C38">■</span> <span style="color:#905A2E">■</span> <span style="color:#73491E">■</span> <span style="color:#6B3E0D">■</span> <span style="color:#723C1B">■</span> <span style="color:#6F3A1E">■</span> <span style="color:#532E15">■</span> <span style="color:#542911">■</span> <span style="color:#3A2115">■</span></td>
+<td headers="n" class="gt_row gt_right">40</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">40.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Clear Complexion Make Myself Clear Makeup</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#EAC0A0">■</span> <span style="color:#E7B692">■</span> <span style="color:#CEA48B">■</span> <span style="color:#CF9D82">■</span> <span style="color:#CE9782">■</span> <span style="color:#D4977B">■</span> <span style="color:#CA917B">■</span> <span style="color:#904D28">■</span></td>
+<td headers="n" class="gt_row gt_right">8</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">50.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">ColorStay Full Cover Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FEE3D2">■</span> <span style="color:#F4D6B4">■</span> <span style="color:#F5CCAE">■</span> <span style="color:#ECCDB0">■</span> <span style="color:#ECC29D">■</span> <span style="color:#E5BA90">■</span> <span style="color:#E9B88E">■</span> <span style="color:#E4B78D">■</span> <span style="color:#DE9F74">■</span> <span style="color:#DCA57C">■</span> <span style="color:#D19660">■</span> <span style="color:#945A3A">■</span></td>
+<td headers="n" class="gt_row gt_right">12</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">50.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">ColorStay Light Cover Liquid Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#E7B094">■</span> <span style="color:#DFB891">■</span> <span style="color:#D6B28C">■</span> <span style="color:#D6A67E">■</span> <span style="color:#E0AB8B">■</span> <span style="color:#BD8863">■</span> <span style="color:#B07646">■</span></td>
+<td headers="n" class="gt_row gt_right">7</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">71.43%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">ColorStay Makeup For Combo/Oily Skin</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#F9CAAC">■</span> <span style="color:#F8C6A1">■</span> <span style="color:#F2BD98">■</span> <span style="color:#F1B396">■</span> <span style="color:#E9B19C">■</span> <span style="color:#E3AD8D">■</span> <span style="color:#E6BBAB">■</span> <span style="color:#E4B49E">■</span> <span style="color:#E3A87E">■</span> <span style="color:#E1A581">■</span> <span style="color:#D5A287">■</span> <span style="color:#DCA787">■</span> <span style="color:#D79F86">■</span> <span style="color:#D5A287">■</span> <span style="color:#C69072">■</span> <span style="color:#BA8468">■</span></td>
+<td headers="n" class="gt_row gt_right">16</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">50.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">ColorStay Makeup For Normal/Dry Skin</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#F9CAAC">■</span> <span style="color:#FCDCB7">■</span> <span style="color:#F8C6A1">■</span> <span style="color:#F2BD98">■</span> <span style="color:#F1B396">■</span> <span style="color:#E9B19C">■</span> <span style="color:#E3AD8D">■</span> <span style="color:#E6BBAB">■</span> <span style="color:#D5A287">■</span> <span style="color:#DCA787">■</span> <span style="color:#CB906E">■</span> <span style="color:#C69072">■</span> <span style="color:#BA8468">■</span> <span style="color:#F5C29A">■</span> <span style="color:#A74E18">■</span></td>
+<td headers="n" class="gt_row gt_right">15</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">53.33%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Complexion Rescue Hydrating Foundation Stick Broad Spectrum SPF 25</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#F3C1A6">■</span> <span style="color:#FCD0AF">■</span> <span style="color:#EEB38F">■</span> <span style="color:#FBC79B">■</span> <span style="color:#E6B9A2">■</span> <span style="color:#D9A58D">■</span> <span style="color:#DAA585">■</span> <span style="color:#EDB497">■</span> <span style="color:#EEBE95">■</span> <span style="color:#DAAC87">■</span> <span style="color:#D79C72">■</span> <span style="color:#D79371">■</span> <span style="color:#CD9568">■</span> <span style="color:#E2A272">■</span> <span style="color:#B17953">■</span> <span style="color:#996A46">■</span> <span style="color:#844D32">■</span> <span style="color:#86563F">■</span> <span style="color:#71422B">■</span> <span style="color:#674036">■</span></td>
+<td headers="n" class="gt_row gt_right">20</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">40.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">COMPLEXION RESCUE™ Hydrating Foundation Stick with Mineral SPF 25 </td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#F0C8B3">■</span> <span style="color:#F4C99F">■</span> <span style="color:#EFC3A0">■</span> <span style="color:#F1C79E">■</span> <span style="color:#E2AD87">■</span> <span style="color:#E2B491">■</span> <span style="color:#DDAF8B">■</span> <span style="color:#DDAC8B">■</span> <span style="color:#E0B78D">■</span> <span style="color:#DBB38C">■</span> <span style="color:#D1A788">■</span> <span style="color:#DDA988">■</span> <span style="color:#D7AD82">■</span> <span style="color:#E3B38C">■</span> <span style="color:#C7A482">■</span> <span style="color:#AD8667">■</span> <span style="color:#8D644E">■</span> <span style="color:#9A6A51">■</span> <span style="color:#8E6A59">■</span> <span style="color:#764E3E">■</span></td>
+<td headers="n" class="gt_row gt_right">20</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">40.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">COMPLEXION RESCUE™ Tinted Moisturizer with Hyaluronic Acid and Mineral SPF 30</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#ECD0C4">■</span> <span style="color:#F5D4B6">■</span> <span style="color:#DCBBAF">■</span> <span style="color:#E2C4B2">■</span> <span style="color:#D3A78A">■</span> <span style="color:#D6ADA1">■</span> <span style="color:#D3A886">■</span> <span style="color:#D4AB9A">■</span> <span style="color:#EBCBAC">■</span> <span style="color:#D0A993">■</span> <span style="color:#D9A986">■</span> <span style="color:#CAA293">■</span> <span style="color:#DEAE88">■</span> <span style="color:#CB9D84">■</span> <span style="color:#D9A480">■</span> <span style="color:#C5937A">■</span> <span style="color:#A47465">■</span> <span style="color:#8B624F">■</span> <span style="color:#9C6351">■</span> <span style="color:#74544E">■</span></td>
+<td headers="n" class="gt_row gt_right">20</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">40.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Dual Finish Multi-Tasking Lightweight Pressed Powder Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#F1D1B9">■</span> <span style="color:#F8E3D3">■</span> <span style="color:#F6E3D4">■</span> <span style="color:#F3D2B4">■</span> <span style="color:#F0CDB1">■</span> <span style="color:#F2CAB0">■</span> <span style="color:#F2CFA7">■</span> <span style="color:#F1CAB0">■</span> <span style="color:#F5CDAC">■</span> <span style="color:#F0C49A">■</span> <span style="color:#F2C49C">■</span> <span style="color:#F3C094">■</span> <span style="color:#EEB683">■</span> <span style="color:#ECAA7F">■</span> <span style="color:#E2A575">■</span> <span style="color:#CF9667">■</span> <span style="color:#F0B882">■</span> <span style="color:#D58D59">■</span> <span style="color:#D08453">■</span> <span style="color:#B36A40">■</span> <span style="color:#C57D4A">■</span> <span style="color:#B45926">■</span> <span style="color:#AE5524">■</span> <span style="color:#A04C1D">■</span> <span style="color:#833C1D">■</span></td>
+<td headers="n" class="gt_row gt_right">25</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">16.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Fit Me Matte + Poreless Liquid Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FEF3EA">■</span> <span style="color:#FEEDE2">■</span> <span style="color:#FEEDDB">■</span> <span style="color:#F6E2D5">■</span> <span style="color:#F8D3B8">■</span> <span style="color:#EFCEAF">■</span> <span style="color:#EDCAB4">■</span> <span style="color:#F2C8B0">■</span> <span style="color:#FACCA5">■</span> <span style="color:#F7C49A">■</span> <span style="color:#EBC099">■</span> <span style="color:#EAB392">■</span> <span style="color:#EAC5A0">■</span> <span style="color:#E5B396">■</span> <span style="color:#E0B087">■</span> <span style="color:#E8AE8A">■</span> <span style="color:#EBBFA7">■</span> <span style="color:#DBAE90">■</span> <span style="color:#E1A58D">■</span> <span style="color:#C29679">■</span> <span style="color:#E1AC87">■</span> <span style="color:#D89878">■</span> <span style="color:#DDA482">■</span> <span style="color:#DE9F75">■</span> <span style="color:#CC8C65">■</span> <span style="color:#C99263">■</span> <span style="color:#CC8555">■</span> <span style="color:#CA8B5F">■</span> <span style="color:#C68462">■</span> <span style="color:#C88350">■</span> <span style="color:#AE6742">■</span> <span style="color:#AA663D">■</span> <span style="color:#A9725A">■</span> <span style="color:#9E6033">■</span> <span style="color:#90653E">■</span> <span style="color:#995840">■</span> <span style="color:#925730">■</span> <span style="color:#8B553F">■</span> <span style="color:#76503C">■</span> <span style="color:#5B3D33">■</span></td>
+<td headers="n" class="gt_row gt_right">40</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">30.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">HD Liquid Coverage Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#E6C39D">■</span> <span style="color:#DFB88C">■</span> <span style="color:#D4B28B">■</span> <span style="color:#EDDFD0">■</span> <span style="color:#EACCB2">■</span> <span style="color:#DAB692">■</span> <span style="color:#EACBAC">■</span> <span style="color:#C19E77">■</span> <span style="color:#B78D62">■</span> <span style="color:#B88F61">■</span> <span style="color:#C9A478">■</span> <span style="color:#CB9D6C">■</span> <span style="color:#C7986D">■</span> <span style="color:#D7A67E">■</span> <span style="color:#E0C0AB">■</span> <span style="color:#B68B61">■</span> <span style="color:#B18258">■</span> <span style="color:#C1956B">■</span> <span style="color:#A67950">■</span> <span style="color:#A47349">■</span> <span style="color:#A36D40">■</span> <span style="color:#996846">■</span> <span style="color:#784B31">■</span> <span style="color:#73492F">■</span> <span style="color:#FBFBFB">■</span> <span style="color:#493329">■</span></td>
+<td headers="n" class="gt_row gt_right">26</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">38.46%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Hello Happy Flawless Brightening Foundation SPF 15</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#EACFB7">■</span> <span style="color:#F7D3B3">■</span> <span style="color:#E9C7A4">■</span> <span style="color:#D0B099">■</span> <span style="color:#DCB590">■</span> <span style="color:#D5A575">■</span> <span style="color:#C88C3F">■</span> <span style="color:#AB6939">■</span> <span style="color:#8D5D35">■</span> <span style="color:#914D26">■</span> <span style="color:#6E452B">■</span> <span style="color:#83503F">■</span></td>
+<td headers="n" class="gt_row gt_right">12</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">50.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Hello Happy Velvet Powder Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#E3CFB7">■</span> <span style="color:#EDD2B5">■</span> <span style="color:#DFC7A5">■</span> <span style="color:#C7AE98">■</span> <span style="color:#DAB48A">■</span> <span style="color:#D0A270">■</span> <span style="color:#C39E68">■</span> <span style="color:#B48E69">■</span> <span style="color:#B78145">■</span> <span style="color:#946542">■</span> <span style="color:#926738">■</span> <span style="color:#7F5739">■</span></td>
+<td headers="n" class="gt_row gt_right">12</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">41.67%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Infallible Pro-Matte Liquid Longwear Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FBE3D4">■</span> <span style="color:#FCDFD4">■</span> <span style="color:#F7C2A3">■</span> <span style="color:#F4C9A9">■</span> <span style="color:#E8A58B">■</span> <span style="color:#EBA67D">■</span> <span style="color:#F2B072">■</span> <span style="color:#D8B195">■</span> <span style="color:#EBAF77">■</span> <span style="color:#DA9C63">■</span> <span style="color:#FEFDFC">■</span> <span style="color:#D5995E">■</span> <span style="color:#CAA17C">■</span> <span style="color:#BA7731">■</span> <span style="color:#D3A166">■</span> <span style="color:#C2743C">■</span> <span style="color:#DB965C">■</span> <span style="color:#B0651E">■</span> <span style="color:#884115">■</span> <span style="color:#8E6149">■</span> <span style="color:#6F4A31">■</span> <span style="color:#552F22">■</span></td>
+<td headers="n" class="gt_row gt_right">22</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">31.82%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Matte Foundation Broad Spectrum SPF 15</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FDE3CF">■</span> <span style="color:#FCCCAC">■</span> <span style="color:#EDC6A5">■</span> <span style="color:#FACE9F">■</span> <span style="color:#EFC6B0">■</span> <span style="color:#F2B792">■</span> <span style="color:#F6C494">■</span> <span style="color:#F1B885">■</span> <span style="color:#F1C5A0">■</span> <span style="color:#E2AF9A">■</span> <span style="color:#E1A77F">■</span> <span style="color:#E0AC87">■</span> <span style="color:#E1A477">■</span> <span style="color:#E9B179">■</span> <span style="color:#E3A676">■</span> <span style="color:#ECAD7C">■</span> <span style="color:#C98F70">■</span> <span style="color:#B17559">■</span> <span style="color:#B0765A">■</span> <span style="color:#BA8058">■</span> <span style="color:#C5895F">■</span> <span style="color:#C17F57">■</span> <span style="color:#9B5628">■</span> <span style="color:#9C5E2A">■</span> <span style="color:#A36744">■</span> <span style="color:#A86D46">■</span> <span style="color:#8E5431">■</span> <span style="color:#975E3A">■</span> <span style="color:#835638">■</span> <span style="color:#774D35">■</span></td>
+<td headers="n" class="gt_row gt_right">30</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">60.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Matte Loose Powder Mineral Foundation SPF 15 </td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#CEB29B">■</span> <span style="color:#D09B83">■</span> <span style="color:#CDA989">■</span> <span style="color:#D2AF90">■</span> <span style="color:#D7BAA2">■</span> <span style="color:#D59C81">■</span> <span style="color:#D19973">■</span> <span style="color:#CAAD85">■</span> <span style="color:#D1A593">■</span> <span style="color:#D0A17D">■</span> <span style="color:#CEA08F">■</span> <span style="color:#CCA67A">■</span> <span style="color:#CCA184">■</span> <span style="color:#CEA56F">■</span> <span style="color:#CD9C78">■</span> <span style="color:#A66D4D">■</span> <span style="color:#A46E51">■</span> <span style="color:#CEA56B">■</span> <span style="color:#CD956A">■</span> <span style="color:#D1A082">■</span> <span style="color:#A3623E">■</span> <span style="color:#D69266">■</span> <span style="color:#A76D4F">■</span> <span style="color:#986448">■</span> <span style="color:#9F5F44">■</span> <span style="color:#A57C5F">■</span> <span style="color:#98644A">■</span> <span style="color:#A57F51">■</span> <span style="color:#905D4A">■</span> <span style="color:#916048">■</span></td>
+<td headers="n" class="gt_row gt_right">30</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">60.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Matte Perfection Full Coverage Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#F3DACE">■</span> <span style="color:#E6C0B0">■</span> <span style="color:#EBC5AE">■</span> <span style="color:#F3C9AA">■</span> <span style="color:#EFC6AB">■</span> <span style="color:#EBC6AA">■</span> <span style="color:#ECC4B1">■</span> <span style="color:#E9C1AA">■</span> <span style="color:#E5C3AF">■</span> <span style="color:#E1AF96">■</span> <span style="color:#D4AA86">■</span> <span style="color:#D1A288">■</span> <span style="color:#DBA685">■</span> <span style="color:#D1A687">■</span> <span style="color:#DBA280">■</span> <span style="color:#D29E84">■</span> <span style="color:#BB826F">■</span> <span style="color:#AA7460">■</span> <span style="color:#A96A5C">■</span> <span style="color:#A36E64">■</span> <span style="color:#99736A">■</span> <span style="color:#98736C">■</span></td>
+<td headers="n" class="gt_row gt_right">22</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">22.73%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Matte Perfection Powder Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#E3C6B8">■</span> <span style="color:#D7B5A3">■</span> <span style="color:#CEB4A3">■</span> <span style="color:#D3B4A4">■</span> <span style="color:#D5B0A0">■</span> <span style="color:#CEB09E">■</span> <span style="color:#D6B4A0">■</span> <span style="color:#D3B09F">■</span> <span style="color:#D3B4A2">■</span> <span style="color:#CCA794">■</span> <span style="color:#D5AE9C">■</span> <span style="color:#D3B29B">■</span> <span style="color:#CEA98F">■</span> <span style="color:#CCA690">■</span> <span style="color:#CAA78D">■</span> <span style="color:#C9A389">■</span> <span style="color:#CFA792">■</span> <span style="color:#C7A38A">■</span> <span style="color:#B48F7C">■</span> <span style="color:#C3977F">■</span> <span style="color:#B48C75">■</span> <span style="color:#C59D83">■</span> <span style="color:#C6987F">■</span> <span style="color:#B48770">■</span> <span style="color:#B58771">■</span> <span style="color:#B1826A">■</span> <span style="color:#B48770">■</span> <span style="color:#B3836D">■</span> <span style="color:#B58168">■</span> <span style="color:#AF846B">■</span> <span style="color:#AD7D66">■</span> <span style="color:#9E7461">■</span> <span style="color:#96705E">■</span> <span style="color:#967262">■</span> <span style="color:#8E6F62">■</span></td>
+<td headers="n" class="gt_row gt_right">35</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">45.71%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Olay Simply Ageless Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#F9E4D6">■</span> <span style="color:#EAC9AA">■</span> <span style="color:#E3B49E">■</span> <span style="color:#EAC9B0">■</span> <span style="color:#EABE9F">■</span> <span style="color:#E9C7AE">■</span> <span style="color:#E3B59E">■</span> <span style="color:#E6B89B">■</span></td>
+<td headers="n" class="gt_row gt_right">8</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">62.50%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">ORIGINAL Foundation Broad Spectrum SPF 15</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FDE3CF">■</span> <span style="color:#FCCCAC">■</span> <span style="color:#EDC6A5">■</span> <span style="color:#FACE9F">■</span> <span style="color:#EFC6B0">■</span> <span style="color:#F2B792">■</span> <span style="color:#F6C494">■</span> <span style="color:#F1B884">■</span> <span style="color:#F1C5A0">■</span> <span style="color:#E2AF9A">■</span> <span style="color:#E1A77F">■</span> <span style="color:#E0AB87">■</span> <span style="color:#E1A477">■</span> <span style="color:#E9B179">■</span> <span style="color:#E3A676">■</span> <span style="color:#ECAD7C">■</span> <span style="color:#C98F70">■</span> <span style="color:#B17559">■</span> <span style="color:#B0765A">■</span> <span style="color:#BA8058">■</span> <span style="color:#C5895F">■</span> <span style="color:#C17F57">■</span> <span style="color:#9B5628">■</span> <span style="color:#9C5E2A">■</span> <span style="color:#A36744">■</span> <span style="color:#A86D46">■</span> <span style="color:#8E5431">■</span> <span style="color:#975E3A">■</span> <span style="color:#835638">■</span> <span style="color:#774D35">■</span></td>
+<td headers="n" class="gt_row gt_right">30</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">60.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">ORIGINAL Liquid Mineral Foundation Broad Spectrum SPF 20</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FBCDAD">■</span> <span style="color:#FDCB9F">■</span> <span style="color:#FAD4A4">■</span> <span style="color:#FCDAAD">■</span> <span style="color:#FACAA2">■</span> <span style="color:#F3C090">■</span> <span style="color:#F5C290">■</span> <span style="color:#F5B780">■</span> <span style="color:#FCC6A0">■</span> <span style="color:#F3B997">■</span> <span style="color:#FCC89C">■</span> <span style="color:#E4AD81">■</span> <span style="color:#F3C38D">■</span> <span style="color:#ECB87E">■</span> <span style="color:#E0AE81">■</span> <span style="color:#DBA678">■</span> <span style="color:#E9B179">■</span> <span style="color:#E0AE7D">■</span> <span style="color:#D6986D">■</span> <span style="color:#DEA97A">■</span> <span style="color:#DCA773">■</span> <span style="color:#C4875C">■</span> <span style="color:#B67A50">■</span> <span style="color:#B77B4F">■</span> <span style="color:#9A613D">■</span> <span style="color:#A36A40">■</span> <span style="color:#AD6D41">■</span> <span style="color:#A96D42">■</span> <span style="color:#A96A3E">■</span> <span style="color:#804F36">■</span></td>
+<td headers="n" class="gt_row gt_right">30</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">60.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">PHYTO-PIGMENTS Flawless Serum Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#ECCFB7">■</span> <span style="color:#EDCDB6">■</span> <span style="color:#D0A787">■</span> <span style="color:#EAC6AC">■</span> <span style="color:#D6A388">■</span> <span style="color:#E8C1A4">■</span> <span style="color:#C78D69">■</span> <span style="color:#C9957E">■</span> <span style="color:#E3B493">■</span> <span style="color:#E1AC88">■</span> <span style="color:#AA7B61">■</span> <span style="color:#9D6E55">■</span> <span style="color:#90563A">■</span></td>
+<td headers="n" class="gt_row gt_right">13</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">61.54%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Pretty Natural Hydrating Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#D5AB86">■</span> <span style="color:#D5A77C">■</span> <span style="color:#D3A275">■</span> <span style="color:#CD9B73">■</span> <span style="color:#CA986B">■</span> <span style="color:#C8956A">■</span> <span style="color:#C89565">■</span> <span style="color:#A86E3D">■</span> <span style="color:#AC6F41">■</span> <span style="color:#AC6E3D">■</span> <span style="color:#A26936">■</span> <span style="color:#A06733">■</span> <span style="color:#8C5526">■</span> <span style="color:#724620">■</span> <span style="color:#76461A">■</span></td>
+<td headers="n" class="gt_row gt_right">15</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">40.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Skin Weightless Powder Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#F3C9B0">■</span> <span style="color:#F2CEB5">■</span> <span style="color:#E7C3A1">■</span> <span style="color:#FBC9A2">■</span> <span style="color:#F0C49C">■</span> <span style="color:#E4B688">■</span> <span style="color:#E4B485">■</span> <span style="color:#DEA77A">■</span> <span style="color:#E7AC7E">■</span> <span style="color:#DEA671">■</span> <span style="color:#D18258">■</span> <span style="color:#835144">■</span></td>
+<td headers="n" class="gt_row gt_right">12</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">58.33%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Super Stay Full Coverage Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#EFE1D2">■</span> <span style="color:#E1C3AB">■</span> <span style="color:#E8CEB3">■</span> <span style="color:#DEC6AD">■</span> <span style="color:#E5C3A9">■</span> <span style="color:#DEC19F">■</span> <span style="color:#E0BD9B">■</span> <span style="color:#E3B791">■</span> <span style="color:#ECBE8B">■</span> <span style="color:#D6B793">■</span> <span style="color:#CAA183">■</span> <span style="color:#E9C797">■</span> <span style="color:#C4A682">■</span> <span style="color:#CEA786">■</span> <span style="color:#C69A76">■</span> <span style="color:#C69475">■</span> <span style="color:#B1805F">■</span> <span style="color:#BF9E73">■</span> <span style="color:#A16D3A">■</span> <span style="color:#935F3F">■</span> <span style="color:#775039">■</span> <span style="color:#67442E">■</span> <span style="color:#5D4233">■</span></td>
+<td headers="n" class="gt_row gt_right">23</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">52.17%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">The Luminous Lifting Cushion Foundation SPF 20 + Refill</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#F0C4AB">■</span> <span style="color:#E3C8B3">■</span> <span style="color:#F3CCBD">■</span> <span style="color:#F3D2C2">■</span> <span style="color:#E8CAB3">■</span> <span style="color:#DEB196">■</span> <span style="color:#DFC0AB">■</span> <span style="color:#BF9C8B">■</span> <span style="color:#C9A493">■</span> <span style="color:#BF9878">■</span> <span style="color:#D0A589">■</span> <span style="color:#AA816E">■</span></td>
+<td headers="n" class="gt_row gt_right">12</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">58.33%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">The Soft Fluid Long Wear Foundation SPF 20</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FCD3BD">■</span> <span style="color:#FDE6D7">■</span> <span style="color:#FDE7D7">■</span> <span style="color:#FDE5D7">■</span> <span style="color:#F6D1BE">■</span> <span style="color:#F9DBB7">■</span> <span style="color:#FDE2CA">■</span> <span style="color:#EFC9A5">■</span> <span style="color:#EEC8B5">■</span> <span style="color:#CAA493">■</span> <span style="color:#F3C4A6">■</span> <span style="color:#F5D4B1">■</span> <span style="color:#B28C75">■</span> <span style="color:#F0C3A6">■</span> <span style="color:#C7A28E">■</span> <span style="color:#F0C2A1">■</span> <span style="color:#EEC6AD">■</span> <span style="color:#DCAF8D">■</span> <span style="color:#F4BF9D">■</span> <span style="color:#D7A986">■</span> <span style="color:#C6856F">■</span> <span style="color:#5D2D18">■</span> <span style="color:#814C33">■</span> <span style="color:#C28B69">■</span> <span style="color:#B18D74">■</span> <span style="color:#D09B5F">■</span> <span style="color:#AC826E">■</span></td>
+<td headers="n" class="gt_row gt_right">27</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">29.63%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Traceless Foundation Stick</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FDE5D4">■</span> <span style="color:#F5E2CE">■</span> <span style="color:#EEC49F">■</span> <span style="color:#D3A58C">■</span> <span style="color:#F8D5C1">■</span> <span style="color:#D3AA7E">■</span> <span style="color:#D7A683">■</span> <span style="color:#D2A884">■</span> <span style="color:#EBAE92">■</span> <span style="color:#F3C29D">■</span> <span style="color:#EFC4A3">■</span> <span style="color:#EFC29D">■</span> <span style="color:#F6CDB5">■</span> <span style="color:#DAA37C">■</span> <span style="color:#EEB296">■</span> <span style="color:#E49F84">■</span> <span style="color:#F3C6A3">■</span> <span style="color:#D29C84">■</span> <span style="color:#D39773">■</span> <span style="color:#D9B188">■</span> <span style="color:#F3C398">■</span> <span style="color:#EDB398">■</span> <span style="color:#F1AF8F">■</span> <span style="color:#DE987B">■</span> <span style="color:#D3A685">■</span> <span style="color:#CCA282">■</span> <span style="color:#E9AB81">■</span> <span style="color:#A26C51">■</span> <span style="color:#D2A57F">■</span> <span style="color:#B16E4B">■</span> <span style="color:#815633">■</span> <span style="color:#AC6C5D">■</span> <span style="color:#A47252">■</span> <span style="color:#A26C50">■</span> <span style="color:#A76347">■</span> <span style="color:#8F6142">■</span> <span style="color:#855F4F">■</span> <span style="color:#705144">■</span> <span style="color:#5A4642">■</span></td>
+<td headers="n" class="gt_row gt_right">39</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">56.41%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Traceless Soft Matte Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#F0D8C2">■</span> <span style="color:#EED8C2">■</span> <span style="color:#E4CCB0">■</span> <span style="color:#E4C7B2">■</span> <span style="color:#E2CCB3">■</span> <span style="color:#E2D0B3">■</span> <span style="color:#E2C8AE">■</span> <span style="color:#E2CCA9">■</span> <span style="color:#E3C9AD">■</span> <span style="color:#E3C7AC">■</span> <span style="color:#E2C9AA">■</span> <span style="color:#E0C6AD">■</span> <span style="color:#DCC3B3">■</span> <span style="color:#D2B395">■</span> <span style="color:#D3B497">■</span> <span style="color:#E1CAB0">■</span> <span style="color:#D1B49B">■</span> <span style="color:#D1B29A">■</span> <span style="color:#D9C1A8">■</span> <span style="color:#D2B08D">■</span> <span style="color:#D1B399">■</span> <span style="color:#D1B393">■</span> <span style="color:#D0AB89">■</span> <span style="color:#CEA985">■</span> <span style="color:#CDAB86">■</span> <span style="color:#C7A987">■</span> <span style="color:#C99F7F">■</span> <span style="color:#C69C7C">■</span> <span style="color:#C9A27C">■</span> <span style="color:#B17750">■</span> <span style="color:#AB7856">■</span> <span style="color:#A87959">■</span> <span style="color:#B0885F">■</span> <span style="color:#AF835D">■</span> <span style="color:#A07356">■</span> <span style="color:#98694D">■</span> <span style="color:#8A664E">■</span> <span style="color:#89624A">■</span> <span style="color:#845A42">■</span> <span style="color:#75503F">■</span></td>
+<td headers="n" class="gt_row gt_right">40</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">55.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Travel Size Babassu Foundcealer Skincare Foundation Broad Spectrum SPF 20</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#EBC8AE">■</span> <span style="color:#EBC8AC">■</span> <span style="color:#D8B091">■</span> <span style="color:#DFB18F">■</span> <span style="color:#D49860">■</span> <span style="color:#8B5333">■</span></td>
+<td headers="n" class="gt_row gt_right">6</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">50.00%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Travel Size Face Tape Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#EDCDB5">■</span> <span style="color:#EABFA2">■</span> <span style="color:#DEA889">■</span> <span style="color:#D79F7A">■</span> <span style="color:#C48A65">■</span> <span style="color:#AF7245">■</span></td>
+<td headers="n" class="gt_row gt_right">6</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">33.33%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">True Skin Hydrating Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#EEBF97">■</span> <span style="color:#E1AB82">■</span> <span style="color:#DEA682">■</span> <span style="color:#C88D69">■</span> <span style="color:#D59975">■</span> <span style="color:#C07A54">■</span> <span style="color:#935332">■</span> <span style="color:#864929">■</span></td>
+<td headers="n" class="gt_row gt_right">8</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">62.50%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Veiled Threat Weightless Micro-Blurring Foundation</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#F4E2DA">■</span> <span style="color:#EBC8B0">■</span> <span style="color:#F2E2D7">■</span> <span style="color:#F3C7B1">■</span> <span style="color:#EFCEA7">■</span> <span style="color:#E8C6A4">■</span> <span style="color:#ECC3A7">■</span> <span style="color:#EDC1AA">■</span> <span style="color:#E6B299">■</span> <span style="color:#EBB793">■</span> <span style="color:#DDAE87">■</span> <span style="color:#DFA881">■</span> <span style="color:#D9AC8A">■</span> <span style="color:#E0AF8B">■</span> <span style="color:#D9B090">■</span> <span style="color:#E7AF85">■</span> <span style="color:#F1AE84">■</span> <span style="color:#DDA57E">■</span> <span style="color:#DC9D76">■</span> <span style="color:#DD9B73">■</span> <span style="color:#CF9D69">■</span> <span style="color:#E29D68">■</span> <span style="color:#E99B63">■</span> <span style="color:#E09158">■</span> <span style="color:#D98D4E">■</span> <span style="color:#D58655">■</span> <span style="color:#DC834F">■</span> <span style="color:#D0895A">■</span> <span style="color:#C87D53">■</span> <span style="color:#C97F53">■</span> <span style="color:#D07741">■</span> <span style="color:#C77341">■</span> <span style="color:#AD6639">■</span> <span style="color:#C4733F">■</span> <span style="color:#C46B3E">■</span> <span style="color:#AB5328">■</span> <span style="color:#82472C">■</span> <span style="color:#83432D">■</span> <span style="color:#87452A">■</span> <span style="color:#6B3927">■</span> <span style="color:#613B21">■</span> <span style="color:#7C4123">■</span></td>
+<td headers="n" class="gt_row gt_right">42</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">45.24%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Vibrancy Argan Oil Foundation Fluid</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#E7CAC0">■</span> <span style="color:#E4C4B7">■</span> <span style="color:#D5B19F">■</span> <span style="color:#CBAE9F">■</span> <span style="color:#A97F6B">■</span> <span style="color:#9E715F">■</span> <span style="color:#8F6459">■</span></td>
+<td headers="n" class="gt_row gt_right">7</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">28.57%</td></tr>
+    <tr><td headers="product" class="gt_row gt_left">Your Skin But Better Foundation + Skincare</td>
+<td headers="shades" class="gt_row gt_center"><span style="color:#FAE6D2">■</span> <span style="color:#E8CCB5">■</span> <span style="color:#ECC8A8">■</span> <span style="color:#F0CBA7">■</span> <span style="color:#F4CBA8">■</span> <span style="color:#EAC1A9">■</span> <span style="color:#EDC6A1">■</span> <span style="color:#E0B78F">■</span> <span style="color:#DEB391">■</span> <span style="color:#F3CFAB">■</span> <span style="color:#ECC097">■</span> <span style="color:#DDB290">■</span> <span style="color:#D6A982">■</span> <span style="color:#CCA17B">■</span> <span style="color:#D7A06F">■</span> <span style="color:#D9A681">■</span> <span style="color:#D79F7A">■</span> <span style="color:#C99567">■</span> <span style="color:#D3A187">■</span> <span style="color:#C1936F">■</span> <span style="color:#CD996C">■</span> <span style="color:#D09868">■</span> <span style="color:#D3965D">■</span> <span style="color:#B6855A">■</span> <span style="color:#B47E50">■</span> <span style="color:#B87241">■</span> <span style="color:#AA7451">■</span> <span style="color:#9E6338">■</span> <span style="color:#9E6E4D">■</span> <span style="color:#996239">■</span> <span style="color:#9A6542">■</span> <span style="color:#8E512B">■</span> <span style="color:#945E40">■</span> <span style="color:#7C4E3A">■</span> <span style="color:#895337">■</span> <span style="color:#73492A">■</span> <span style="color:#6A3C22">■</span> <span style="color:#603725">■</span> <span style="color:#673F39">■</span> <span style="color:#644846">■</span></td>
+<td headers="n" class="gt_row gt_right">40</td>
+<td headers="prop_at_below_natural" class="gt_row gt_right">42.50%</td></tr>
+  </tbody>
+  
+  
+</table>
+</div>
 </div>
 
 
