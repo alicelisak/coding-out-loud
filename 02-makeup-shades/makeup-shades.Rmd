@@ -9,6 +9,7 @@ output: html_document
 ```{r load-packages, message = FALSE}
 library(tidyverse)
 library(here)
+library(glue)
 ```
 
 ```{r load-data, message = FALSE}
@@ -22,6 +23,25 @@ allNumbers <- read_csv(here::here("02-makeup-shades", "data/allNumbers.csv"))
 ## Task 1: Recreate
 
 Recreate the basics of the sketch as a table in R.
+
+- Create the first three columns of the table 
+
+
+```{r}
+first_three <- allNumbers |>
+  group_by(product) |>
+  arrange(numbers) |>
+  summarise(
+    shades = glue_collapse(hex, sep = ", "),
+    light_to_dark = unique(lightToDark)
+  )
+```
+
+- Create 
+
+```{r}
+
+```
 
 ## Task 2: Improve
 
